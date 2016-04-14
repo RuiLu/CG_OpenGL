@@ -256,7 +256,12 @@ void mouse_move_translate (int x, int y)
 // regular keys.
 void mykey(unsigned char key, int mousex, int mousey)
 {
-    if(key=='q'||key=='Q') exit(0);
+    if(key=='q'||key=='Q') {
+        delete vertices;
+        delete points;
+        delete colors;
+        exit(0);
+    }
     
     // and r resets the view:
     if (key =='r') {
@@ -281,7 +286,7 @@ int main(int argc, char** argv)
     
     // give us a window in which to display, and set its title:
     glutInitWindowSize(512, 512);
-    glutCreateWindow("Rotate / Translate Triangle");
+    glutCreateWindow("Rotate / Translate Triangle - rl2784");
     
     // for displaying things, here is the callback specification:
     glutDisplayFunc(display);
