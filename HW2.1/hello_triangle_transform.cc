@@ -271,12 +271,9 @@ void mykey(unsigned char key, int mousex, int mousey)
 
 int main(int argc, char** argv)
 {
-//    points = new point4[NumVertices]();
-//    colors = new color4[NumVertices]();
     
     read_wavefront_file(argv[1], v);
-    std::cout<<v.size()<<std::endl;
-    NumVertices = v.size();
+    NumVertices = (int)v.size();
     
     // initialize glut, and set the display modes
     glutInit(&argc, argv);
@@ -303,9 +300,6 @@ int main(int argc, char** argv)
     
     points = new point4[NumVertices];
     colors = new color4[NumVertices];
-//    std::cout<<sizeof(*points) * NumVertices<<std::endl;
-    
-    
     
     vertices = new point4[NumVertices]();
 

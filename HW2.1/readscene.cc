@@ -69,8 +69,6 @@ void read_wavefront_file (const char *file, vector<point4> &vertices) {
     
     in.close();
     
-    cout << "found this many tris, verts: " << tris.size () / 3.0 << "  " << verts.size () / 3.0 << endl;
-    
     double v0_x, v0_y, v0_z;
     double v1_x, v1_y, v1_z;
     double v2_x, v2_y, v2_z;
