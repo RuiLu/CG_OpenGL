@@ -20,6 +20,7 @@
 #include "amath.h"
 
 int NumVertices = 0;
+int NumNormals = 0;
 
 typedef amath::vec4  point4;
 typedef amath::vec4  color4;
@@ -31,15 +32,16 @@ float posx = 0.0;   // translation along X
 float posy = 0.0;   // translation along Y
 float posz = 5.0;   // translation along Z
 
-float radius = 5.0;
+float radius = 3.0;
 float beta = 0.0;  // rotation around the X axis
 
 GLuint buffers[2];
 GLint matrix_loc;
 
-point4 *vertices;
-
+point4 *points;
+vec4 *normals;
 std::vector<point4> v;
+std::vector<vec4> n;
 
 // viewer's position, for lighting calculations
 vec4 viewer = vec4(posx, posy, radius, 1.0);
@@ -59,11 +61,11 @@ color4 material_specular = color4(1.0, 0.8, 0.0, 1.0);
 float material_shininess = 100.0;
 
 // we will copy our transformed points to here:
-point4 *points;
+//point4 *points;
 
 // and we will store the colors, per face per vertex, here. since there is
 // only 1 triangle, with 3 vertices, there will just be 3 here:
-color4 *colors;
+//color4 *colors;
 
 // a transformation matrix, for the rotation, which we will apply to every
 // vertex:
@@ -80,7 +82,7 @@ mat4 modelView;
 GLuint program; //shaders
 GLuint modelView_loc;
 
-void read_wavefront_file (const char *file, std::vector<point4> &v);
+void read_wavefront_file (const char *file, std::vector<point4> &v, std::vector<vec4> &n);
 
 // product of components, which we will use for shading calculations:
 vec4 product(vec4 a, vec4 b)
@@ -92,46 +94,46 @@ vec4 product(vec4 a, vec4 b)
 // transform the triangle's vertex data and put it into the points array.
 // also, compute the lighting at each vertex, and put that into the colors
 // array.
-void tri()
-{
-    for (int i = 0; i < NumVertices / 3; ++i) {
-        // compute the lighting at each vertex, then set it as the color there:
-        vec3 n1 = normalize(cross(ctm*vertices[i*3+1] - ctm*vertices[i*3],
-                                  ctm*vertices[i*3+2] - ctm*vertices[i*3+1]));
-        vec4 n = vec4(n1[0], n1[1], n1[2], 0.0);
-        vec4 half = normalize(light_position+viewer);
-        color4 ambient_color, diffuse_color, specular_color;
-        
-//        ambient_color = product(material_ambient, light_ambient);
-        
-        
-        vec4 l_v = normalize(light_position - vertices[i*3]);
-        float dd = dot(l_v, n);
-        
-        //float dd = dot(light_position, n);
-        
-        if(dd>0.0) diffuse_color = dd*product(light_diffuse, material_diffuse);
-        else diffuse_color =  color4(0.0, 0.0, 0.0, 1.0);
-        
-        dd = dot(half, n);
-        if(dd > 0.0) specular_color = exp(material_shininess*log(dd))*product(light_specular, material_specular);
-        else specular_color = vec4(0.0, 0.0, 0.0, 1.0);
-        
-        
-        // now transform the vertices according to the ctm transformation matrix,
-        // and set the colors for each of them as well. as we are going to give
-        // flat shading, we will ingore the specular component for now.
-        points[i*3] = vertices[i*3];
-        colors[i*3] = diffuse_color;
-        
-        points[i*3+1] = vertices[i*3+1];
-        colors[i*3+1] = diffuse_color;
-        
-        points[i*3+2] = vertices[i*3+2];
-        colors[i*3+2] = diffuse_color;
-    }
-
-}
+//void tri()
+//{
+//    for (int i = 0; i < NumVertices / 3; ++i) {
+//        // compute the lighting at each vertex, then set it as the color there:
+//        vec3 n1 = normalize(cross(vertices[i*3+1] - vertices[i*3],
+//                                  vertices[i*3+2] - vertices[i*3]));
+//        vec4 n = vec4(n1[0], n1[1], n1[2], 0.0);
+//        vec4 half = normalize(light_position+viewer);
+//        color4 ambient_color, diffuse_color, specular_color;
+//        
+////        ambient_color = product(material_ambient, light_ambient);
+//        
+//        
+//        vec4 l_v = normalize(light_position - vertices[i*3]);
+//        float dd = dot(l_v, n);
+//        
+//        //float dd = dot(light_position, n);
+//        
+//        if(dd>0.0) diffuse_color = dd*product(light_diffuse, material_diffuse);
+//        else diffuse_color =  color4(0.0, 0.0, 0.0, 1.0);
+//        
+//        dd = dot(half, n);
+//        if(dd > 0.0) specular_color = exp(material_shininess*log(dd))*product(light_specular, material_specular);
+//        else specular_color = vec4(0.0, 0.0, 0.0, 1.0);
+//        
+//        
+//        // now transform the vertices according to the ctm transformation matrix,
+//        // and set the colors for each of them as well. as we are going to give
+//        // flat shading, we will ingore the specular component for now.
+//        points[i*3] = vertices[i*3];
+//        colors[i*3] = diffuse_color;
+//        
+//        points[i*3+1] = vertices[i*3+1];
+//        colors[i*3+1] = diffuse_color;
+//        
+//        points[i*3+2] = vertices[i*3+2];
+//        colors[i*3+2] = diffuse_color;
+//    }
+//
+//}
 
 
 // initialization: set up a Vertex Array Object (VAO) and then
@@ -161,7 +163,12 @@ void init()
     // data is located, and finally a "hint" about how we are going to use
     // the data (the driver will put it in a good memory location, hopefully)
     
-    glBufferData(GL_ARRAY_BUFFER, sizeof(*points) * NumVertices + sizeof(*colors) * NumVertices, NULL, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(*points) * NumVertices + sizeof(*normals) * NumNormals, NULL, GL_STATIC_DRAW);
+   
+    
+    glBufferSubData( GL_ARRAY_BUFFER, 0, sizeof(*points) * NumVertices, *points);
+    glBufferSubData( GL_ARRAY_BUFFER, sizeof(*points) * NumVertices, sizeof(*normals) * NumNormals, \
+                    *normals);
     
     // load in these two shaders...  (note: InitShader is defined in the
     // accompanying initshader.c code).
@@ -184,9 +191,8 @@ void init()
     // beginning of the buffer
     glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
 
-    loc2 = glGetAttribLocation(program, "vColor");
+    loc2 = glGetAttribLocation(program, "vNormal");
     glEnableVertexAttribArray(loc2);
-
     glVertexAttribPointer(loc2, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(*points) * NumVertices));
     
     /*
@@ -197,11 +203,8 @@ void init()
     */
     
     modelView_loc = glGetUniformLocation(program, "modelView");
-    
+
     // set value to vshader according to location
-    GLuint attr_loc = glGetUniformLocation(program, "test");
-    glUniform4fv(attr_loc, 1, vec4(0.7,0.7,0.7,1.0));
-    
     GLuint lp_loc = glGetUniformLocation(program, "light_position");
     glUniform4fv(lp_loc, 1, light_position);
     
@@ -242,20 +245,17 @@ void display( void )
     // based on where the mouse has moved to, construct a transformation matrix:
 //    ctm = Translate(posx*.01,posy*.01,0.) * RotateY(theta) * RotateX(beta);
     ctm = Translate(0.,0.,0.);
-    std::cout<<viewer<<std::endl;
     
     lookAt = LookAt(viewer, at, up);
     perspective = Perspective(40.0, 1.0, 1.0, 50.0);
-    modelView = perspective * lookAt;
+    modelView = perspective * lookAt * ctm;
     glUniformMatrix4fv(modelView_loc, 1, GL_TRUE, modelView);
     
-    // now build transform all the vertices and put them in the points array,
-    // and their colors in the colors array:
-    tri();
-    
     // tell the VBO to get the data from the points array and the colors array:
-    glBufferSubData( GL_ARRAY_BUFFER, 0, sizeof(*points) * NumVertices, *points );
-    glBufferSubData( GL_ARRAY_BUFFER, sizeof(*points) * NumVertices, sizeof(*colors) * NumVertices, *colors );
+//    glBufferSubData( GL_ARRAY_BUFFER, 0, sizeof(*points) * NumVertices, *points );
+//    glBufferSubData( GL_ARRAY_BUFFER, sizeof(*points) * NumVertices, sizeof(*normals) * NumNormals, \
+//                    *normals);
+    
     
     // draw the VAO:
     glDrawArrays(GL_TRIANGLES, 0, NumVertices);
@@ -311,16 +311,6 @@ void mouse_move_translate (int x, int y)
     static int lastx = 0;
     static int lasty = 0;  // keep track of where the mouse was last:
 
-//    if (x - lastx < 0) ++posx;
-//    else if (x - lastx > 0) --posx;
-//    lastx = x;
-//
-//    if (y - lasty > 0) --posy;
-//    else if (y - lasty < 0) ++posy;
-//    lasty = y;
-    
-    
-    
     if (x != lastx) {
         int amntX = x - lastx;
         theta +=  amntX / 1.8;
@@ -353,9 +343,8 @@ void mouse_move_translate (int x, int y)
 void mykey(unsigned char key, int mousex, int mousey)
 {
     if(key=='q'||key=='Q') {
-        delete vertices;
         delete points;
-        delete colors;
+        delete normals;
         exit(0);
     }
     
@@ -363,19 +352,17 @@ void mykey(unsigned char key, int mousex, int mousey)
     if (key =='r') {
         posx = 0;
         posy = 0;
-        theta = 180.0;
-        beta = 0.0;
         viewer.x = 0.0;
         viewer.y = 0.0;
-        viewer.z = 5.0;
-        radius = 5.0;
+        viewer.z = 3.0;
+        radius = 3.0;
         glutPostRedisplay();
     }
     
     // z moves the camera closer to the origin
     if (key == 'z') {
         std::cout<<"z"<<std::endl;
-        if (radius >=2) {
+        if (radius > 2) {
             float old_radius = radius;
             radius--;
             viewer.x = viewer.x * radius / old_radius;
@@ -388,7 +375,6 @@ void mykey(unsigned char key, int mousex, int mousey)
     
     // x pulls the camera away from the origin
     if (key == 'x') {
-        std::cout<<"x"<<std::endl;
         if (radius <=50) {
             float old_radius = radius;
             radius++;
@@ -405,8 +391,19 @@ void mykey(unsigned char key, int mousex, int mousey)
 int main(int argc, char** argv)
 {
     
-    read_wavefront_file(argv[1], v);
+    read_wavefront_file(argv[1], v, n);
     NumVertices = (int)v.size();
+    NumNormals = (int)n.size();
+    
+    points = new point4[NumVertices];
+    normals = new vec4[NumNormals];
+    
+    for (int i = 0; i < NumVertices; ++i) {
+        points[i] = v[i];
+    }
+    for (int i = 0; i < NumNormals; ++i) {
+        normals[i] = n[i];
+    }
     
     // initialize glut, and set the display modes
     glutInit(&argc, argv);
@@ -421,8 +418,8 @@ int main(int argc, char** argv)
     
     // when the mouse is moved, call this function!
     // you can change this to mouse_move_translate to see how it works
-//    glutMotionFunc(mouse_move_rotate);
     glutMotionFunc(mouse_move_translate);
+    
     // for any keyboard activity, here is the callback:
     glutKeyboardFunc(mykey);
     
@@ -430,15 +427,6 @@ int main(int argc, char** argv)
     // initialize the extension manager: sometimes needed, sometimes not!
     glewInit();
 #endif
-    
-    points = new point4[NumVertices];
-    colors = new color4[NumVertices];
-    
-    vertices = new point4[NumVertices]();
-
-    for (int i = 0; i < v.size(); ++i) {
-        vertices[i] = v[i];
-    }
     
     // call the init() function, defined above:
     init();

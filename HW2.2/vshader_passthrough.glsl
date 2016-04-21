@@ -15,6 +15,7 @@ attribute vec4 vPosition;
 //
 // on mac you may have to say: "attribute vec4 vColor;" instead of this:
 attribute vec4 vColor;
+attribute vec4 vNormal;
 
 // we are going to be outputting a single 4-vector, called color, which
 // may be different for each vertex.
@@ -24,9 +25,7 @@ attribute vec4 vColor;
 // on mac you may have to say: "varying vec4 color;" instead of this:
 varying vec4 color;
 
-uniform vec4 test;
-
-//uniform point4 light_position;
+uniform vec4 light_position;
 uniform vec4 light_ambient;
 uniform vec4 light_diffuse;
 uniform vec4 light_specular;
@@ -46,10 +45,37 @@ vec4 product(vec4 a, vec4 b)
 
 void main() 
 {
+    vec3 pos = vec3(vPosition[0], vPosition[1], vPosition[2]);
+    
+    vec3 l_p = vec3(light_position[0], light_position[1], light_position[2]);
+    vec3 L = normalize(l_p - pos);
+    vec3 E = normalize(-pos);
+    vec3 H = normalize(L + E);
+    
+//    vec4 N_temp = normalize(modelView * vNormal);
+    vec3 N = vec3(vNormal[0], vNormal[1], vNormal[2]);
+    
     vec4 ambient_color;
+    vec4 diffuse_color;
+    vec4 specular_color;
+    
+    color += product(material_ambient, light_ambient);
+    
+    float Kd = dot(L, N);
+    if (Kd > 0.0) {
+        color += Kd * product(light_diffuse, material_diffuse);
+    } else {
+        color += vec4(0.0, 0.0, 0.0, 1.0);
+    }
+    
+    float Ks = dot(H, N);
+    if (Ks > 0.0) {
+        color += exp(material_shininess*log(Ks))*product(light_specular, material_specular);
+    } else {
+        color += vec4(0.0, 0.0, 0.0, 1.0);
+    }
     
     gl_Position = modelView * vPosition;
-    ambient_color = product(material_ambient, light_ambient);
-    
-    color = vColor + ambient_color;
+//    color = diffuse_color + ambient_color;
+    color[3] = 1.0;
 }
