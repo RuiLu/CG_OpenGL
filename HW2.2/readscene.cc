@@ -27,12 +27,6 @@ void read_wavefront_file (const char *file, vector<point4> &vertices, vector<vec
     vector<int> tris;
     vector<float> verts;
     
-    vector<vector<vec3>> all_vert_norms;
-    vector<vector<vec3>> vert_norms;
-    vector<vector<vec3>> triangles;
-    vector<vec3> tri_norms;
-    vector<vec3> vert_temp;
-    
     cout<<file<<endl;
     
     tris.clear();
@@ -76,86 +70,51 @@ void read_wavefront_file (const char *file, vector<point4> &vertices, vector<vec
     
     in.close();
     
-    double v0_x, v0_y, v0_z;
-    double v1_x, v1_y, v1_z;
-    double v2_x, v2_y, v2_z;
+    int NumVertice = (int)tris.size();
+    int NumUniqueVertices = (int)(verts.size() / 3);
     
-    vert_norms.resize(verts.size() / 3);
-    vert_temp.resize(verts.size() / 3);
-    triangles.resize(tris.size() / 3);
+    vertices.resize(NumVertice);
+    normals.resize(NumVertice);
     
-    cout<<verts.size()<<" "<<vert_norms.size()<<endl;
+    point4* v_temp = new point4[NumUniqueVertices];
+    vec4* n_temp = new vec4[NumUniqueVertices];
     
-    vec3 n;
-    
-    for (int i = 0; i < (int)(tris.size() / 3); i++) {
-        
-        v0_x = verts[3 * tris[3 * i]];
-        v0_y = verts[3 * tris[3 * i] + 1];
-        v0_z = verts[3 * tris[3 * i] + 2];
-        v1_x = verts[3 * tris[3 * i + 1]];
-        v1_y = verts[3 * tris[3 * i + 1] + 1];
-        v1_z = verts[3 * tris[3 * i + 1] + 2];
-        v2_x = verts[3 * tris[3 * i + 2]];
-        v2_y = verts[3 * tris[3 * i + 2] + 1];
-        v2_z = verts[3 * tris[3 * i + 2] + 2];
-        
-        vertices.push_back(point4(v0_x, v0_y, v0_z, 1.0));
-        vertices.push_back(point4(v1_x, v1_y, v1_z, 1.0));
-        vertices.push_back(point4(v2_x, v2_y, v2_z, 1.0));
-        
-        vert_temp[tris[3 * i]] = vec3(v0_x, v0_y, v0_z);
-        vert_temp[tris[3 * i + 1]] = vec3(v1_x, v1_y, v1_z);
-        vert_temp[tris[3 * i + 2]] = vec3(v2_x, v2_y, v2_z);
-        
-        n = normalize(cross(vert_temp[tris[3 * i + 1]] - vert_temp[tris[3 * i]],
-                                  vert_temp[tris[3 * i + 2]] - vert_temp[tris[3 * i]]));
-        
-        
-        triangles[i].push_back(vec3(v0_x, v0_y, v0_z));
-        triangles[i].push_back(vec3(v1_x, v1_y, v1_z));
-        triangles[i].push_back(vec3(v2_x, v2_y, v2_z));
-        
-        tri_norms.push_back(n);
-        vert_norms[tris[3 * i]].push_back(n);
-        vert_norms[tris[3 * i + 1]].push_back(n);
-        vert_norms[tris[3 * i + 2]].push_back(n);
-        
+    // get the unique vertex array
+    for (int i = 0; i < NumUniqueVertices; ++i) {
+        v_temp[i] = point4(verts[3*i], verts[3*i+1], verts[3*i+2], 1.0);
     }
     
-    all_vert_norms.resize(vertices.size());
-//    std::cout<<"triangle normal size: "<<tri_norms.size()<<std::endl;
-//    std::cout<<"triangle size: "<<triangles.size()<<std::endl;
-    
-    std::cout<<"From now on, you will wait for a relative long time, because there is 3-for-loop, \n"
-             <<"I will optimize it.\n"<<std::endl;
-    
-    for (int i = 0; i < triangles.size(); ++i) {
-        for (int j = 0; j < 3; ++j) {
-            vec3 v_out = triangles[i][j];
-            for (int k = 0; k < vertices.size(); ++k) {
-                vec4 v_in = vertices[k];
-                if (v_out[0] == v_in[0] && v_out[1] == v_in[1] && v_out[1] == v_in[1]) {
-                    all_vert_norms[k].push_back(tri_norms[i]);
-                }
-            }
-        }
+    // get each vertex's normal, store in a vector
+    for (int i = 0; i < (int)(tris.size() / 3); ++i) {
+        int v_1 = tris[i*3];
+        int v_2 = tris[i*3+1];
+        int v_3 = tris[i*3+2];
+        
+        vec3 normal = normalize(cross(v_temp[v_2] - v_temp[v_1], v_temp[v_3] - v_temp[v_1]));
+        vec4 tri_norm = vec4(normal[0], normal[1], normal[2], 0.0);
+        
+        n_temp[v_1] += tri_norm;
+        n_temp[v_2] += tri_norm;
+        n_temp[v_3] += tri_norm;
     }
     
-    std::cout<<"a_v_n size: "<<all_vert_norms.size()<<std::endl;
-    
-    float count = 0.0;
-    vec3 temp;
-    for (int i = 0; i < all_vert_norms.size(); ++i) {
-        count = (int)all_vert_norms[i].size();
-        temp = vec3(0.0, 0.0, 0.0);
-        
-        for (int j = 0; j < count; ++j) {
-            temp += all_vert_norms[i][j];
-        }
-        
-        temp = normalize(temp / count);
-        normals.push_back(vec4(temp[0], temp[1], temp[2], 0.0));
+    for (int i = 0; i < NumUniqueVertices; ++i) {
+        n_temp[i] = normalize(n_temp[i]);
     }
     
+    for (int i = 0; i < (int)(tris.size() /3); ++i) {
+        int v_1 = tris[i*3];
+        int v_2 = tris[i*3+1];
+        int v_3 = tris[i*3+2];
+        
+        vertices[i*3] = v_temp[v_1];
+        normals[i*3] = n_temp[v_1];
+        vertices[i*3+1] = v_temp[v_2];
+        normals[i*3+1] = n_temp[v_2];
+        vertices[i*3+2] = v_temp[v_3];
+        normals[i*3+2] = n_temp[v_3];
+    }
+    
+    delete[] v_temp;
+    delete[] n_temp;
 }
