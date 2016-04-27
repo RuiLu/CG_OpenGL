@@ -10,6 +10,7 @@
 #include <vector>
 #include <string>
 #include <cstring>
+#include "beziertool.h"
 #include "amath.h"
 
 #define PI 3.14159265
@@ -41,9 +42,10 @@ point4 *points;
 vec4 *normals;
 vector<point4> v;
 vector<vec4> n;
-vector<vector<vector<point4>>> model;
 
-
+vector<Patch> models;
+Model model;
+int NumSample = 10;
 
 // light & material definitions, again for lighting calculations:
 point4 light_position = point4(100.0, 100.0, 100.0, 1.0);
@@ -62,11 +64,13 @@ mat4 ctm;
 mat4 lookAt;
 mat4 perspective;
 
+std::string filename;
+std::string extension;
 
 GLuint program; //shaders
 
 void read_wavefront_file(const char *file, std::vector<point4> &v, std::vector<vec4> &n);
-void read_custom_file(const char* file, vector<vector<vector<point4>>> &model);
+void read_custom_file(const char* file, vector<Patch> &model);
 
 inline vec4 sphere_To_cartesian(float r, float theta, float phi) {
     return vec4(r*sin(theta)*sin(phi), r*cos(phi), r*cos(theta)*sin(phi), 1.0);
@@ -247,6 +251,46 @@ void mykey(unsigned char key, int mousex, int mousey)
         }
     }
     
+    if (extension.compare("txt") == 0) {
+        
+        int oldNumSample = NumSample;
+        if (key == ',') {
+            if (NumSample < 20) {
+                NumSample++;
+                std::cout<<','<<std::endl;
+            }
+        }
+        if (key == '.') {
+            if (NumSample > 2) {
+                NumSample--;
+            }
+        }
+        
+        if (oldNumSample != NumSample) {
+            std::cout<<"change"<<std::endl;
+            
+            v.clear();
+            n.clear();
+            
+            model.clearData();
+            model.setPatches(models);
+            model.subDivide(NumSample);
+            model.getDataFromTriangles(v, n);
+            
+            std::cout<<v.size()<<std::endl;
+            std::cout<<n.size()<<std::endl;
+            NumVertices = (int)v.size();
+            NumNormals = (int)n.size();
+            
+            for (int i = 0; i < NumVertices; ++i) {
+                points[i] = v[i];
+            }
+            for (int i = 0; i < NumNormals; ++i) {
+                normals[i] = n[i];
+            }
+        }
+    }
+    
     glutPostRedisplay();
     
 }
@@ -255,8 +299,8 @@ void mykey(unsigned char key, int mousex, int mousey)
 
 int main(int argc, char** argv)
 {
-    std::string filename = (std::string)argv[1];
-    std::string extension = filename.substr(filename.size() - 3);
+    filename = (std::string)argv[1];
+    extension = filename.substr(filename.size() - 3);
     
     if (extension.compare("obj") == 0) {
         read_wavefront_file(argv[1], v, n);
@@ -273,16 +317,26 @@ int main(int argc, char** argv)
             normals[i] = n[i];
         }
     } else if (extension.compare("txt") == 0) {
-        read_custom_file(argv[1], model);
-        NumPatches = model.size();
-        for (int i = 0; i < NumPatches; ++i) {
-            vector<vector<point4>> patch = model[i];
-            for (int j = 0; j < patch.size(); ++j) {
-                for (int k = 0; k < patch[j].size(); ++k) {
-                    cout<<patch[j][k].x<<" "<<patch[j][k].y<<" "<<patch[j][k].z<<" ";
-                }
-                cout<<""<<endl;
-            }
+        read_custom_file(argv[1], models);
+        NumPatches = (int)models.size();
+        model.setPatches(models);
+        model.subDivide(NumSample);
+        model.getDataFromTriangles(v, n);
+        
+        std::cout<<"length of v: "<<v.size()<<std::endl;
+        std::cout<<"length of n: "<<n.size()<<std::endl;
+        
+        NumVertices = (int)v.size();
+        NumNormals = (int)n.size();
+        
+        points = new point4[NumVertices];
+        normals = new vec4[NumNormals];
+        
+        for (int i = 0; i < NumVertices; ++i) {
+            points[i] = v[i];
+        }
+        for (int i = 0; i < NumNormals; ++i) {
+            normals[i] = n[i];
         }
     }
     

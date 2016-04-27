@@ -16,6 +16,7 @@
 #include <vector>
 #include <map>
 #include "amath.h"
+#include "beziertool.h"
 //#include "hello_triangle.h"
 
 #define IM_DEBUGGING
@@ -121,7 +122,7 @@ void read_wavefront_file (const char *file, vector<point4> &vertices, vector<vec
     delete[] n_temp;
 }
 
-void read_custom_file(const char *file, vector<vector<vector<point4>>> &model) {
+void read_custom_file(const char *file, vector<Patch> &model) {
     
     std::cout<<file<<std::endl;
     
@@ -153,8 +154,8 @@ void read_custom_file(const char *file, vector<vector<vector<point4>>> &model) {
             
             istringstream iss(buffer);
             iss >> u >> v;
-            cout<<u<<" "<<v<<endl;
             
+            Patch patch(u, v);
             vector<vector<point4>> points;
             
             for (int j = 0; j <= v; j++) {
@@ -174,8 +175,9 @@ void read_custom_file(const char *file, vector<vector<vector<point4>>> &model) {
                     row_points.push_back(point4(x, y, z, 1.0));
                 }
                 points.push_back(row_points);
+                patch.setPoints(points);
             }
-            model.push_back(points);
+            model.push_back(patch);
         }
         
     } else {
