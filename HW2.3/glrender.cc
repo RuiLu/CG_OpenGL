@@ -24,9 +24,9 @@ int NumPatches = 0;
 typedef amath::vec4  point4;
 typedef amath::vec4  color4;
 
-GLfloat theta = 0.0;  // polar angle for spherical polar coordinate
-GLfloat phi = 3.14159265 / 2; // azimuthal angle for spherical polar coordinate
-GLfloat radius = 3.0;
+GLfloat theta = 357.0;  // polar angle for spherical polar coordinate
+GLfloat phi = 0.8; // azimuthal angle for spherical polar coordinate
+GLfloat radius = 5.0;
 GLfloat near_plane = 1.0;
 GLfloat far_plane = 50.0;
 GLfloat field_of_view = 40.0;
@@ -151,6 +151,24 @@ void init()
 void display( void )
 {
  
+    
+    glBufferData(GL_ARRAY_BUFFER, sizeof(*points) * NumVertices + sizeof(*normals) * NumNormals, NULL, GL_STATIC_DRAW);
+    
+    glBufferSubData( GL_ARRAY_BUFFER, 0, sizeof(*points) * NumVertices, points);
+    glBufferSubData( GL_ARRAY_BUFFER, sizeof(*points) * NumVertices, sizeof(*normals) * NumNormals, \
+                    normals);
+    
+    GLuint loc, loc2;
+    
+    loc = glGetAttribLocation(program, "vPosition");
+    glEnableVertexAttribArray(loc);
+    glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+    
+    loc2 = glGetAttribLocation(program, "vNormal");
+    glEnableVertexAttribArray(loc2);
+    glVertexAttribPointer(loc2, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(*points) * NumVertices));
+    
+    
     // clear the window (with white) and clear the z-buffer (which isn't used
     // for this example).
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -223,11 +241,14 @@ void mykey(unsigned char key, int mousex, int mousey)
         exit(0);
     }
     
+    int reset_old_samples = NumSample;
+    
     // and r resets the view:
     if (key =='r') {
-        radius = 3.0;
-        theta = 0.0;
-        phi = PI / 2;
+        radius = 5.0;
+        theta = 357.0;
+        phi = 0.8;
+        NumSample = 10;
     }
     
     // z moves the camera closer to the origin
@@ -254,19 +275,20 @@ void mykey(unsigned char key, int mousex, int mousey)
     if (extension.compare("txt") == 0) {
         
         int oldNumSample = NumSample;
-        if (key == ',') {
+        if (key == '<') {
             if (NumSample < 20) {
                 NumSample++;
-                std::cout<<','<<std::endl;
+                std::cout<<'<'<<std::endl;
             }
         }
-        if (key == '.') {
+        if (key == '>') {
             if (NumSample > 2) {
                 NumSample--;
+                std::cout<<'>'<<std::endl;
             }
         }
         
-        if (oldNumSample != NumSample) {
+        if (oldNumSample != NumSample || reset_old_samples != NumSample) {
             std::cout<<"change"<<std::endl;
             
             v.clear();
@@ -281,6 +303,12 @@ void mykey(unsigned char key, int mousex, int mousey)
             std::cout<<n.size()<<std::endl;
             NumVertices = (int)v.size();
             NumNormals = (int)n.size();
+            
+            delete[] points;
+            delete[] normals;
+            
+            points = new point4[NumVertices];
+            normals = new vec4[NumNormals];
             
             for (int i = 0; i < NumVertices; ++i) {
                 points[i] = v[i];
@@ -310,6 +338,9 @@ int main(int argc, char** argv)
         points = new point4[NumVertices];
         normals = new vec4[NumNormals];
         
+//        points.resize(NumVertices);
+//        normals.reserve(NumNormals);
+        
         for (int i = 0; i < NumVertices; ++i) {
             points[i] = v[i];
         }
@@ -331,7 +362,7 @@ int main(int argc, char** argv)
         
         points = new point4[NumVertices];
         normals = new vec4[NumNormals];
-        
+
         for (int i = 0; i < NumVertices; ++i) {
             points[i] = v[i];
         }
@@ -350,7 +381,7 @@ int main(int argc, char** argv)
     
     // give us a window in which to display, and set its title:
     glutInitWindowSize(512, 512);
-    glutCreateWindow("HW2.2 - rl2784");
+    glutCreateWindow("HW2.3 - rl2784");
     
     // for displaying things, here is the callback specification:
     glutDisplayFunc(display);

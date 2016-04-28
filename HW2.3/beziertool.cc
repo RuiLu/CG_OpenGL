@@ -142,13 +142,6 @@ void Model::setPatches(vector<Patch> patches) {
 void Model::subDivide(int NumSample) {
     for (int i = 0; i < patches.size(); ++i) {
         Patch patch = patches[i];
-//        cout<<"u: "<<patch.u_degree<<"\tv: "<<patch.v_degree<<endl;
-//        for (int j = 0; j < patch.points.size(); ++j) {
-//            for (int k = 0; k < patch.points[j].size(); ++k) {
-//                cout<<patch.points[j][k].x<<" "<<patch.points[j][k].y<<" "<<patch.points[j][k].z<<" ";
-//            }
-//            cout<<""<<endl;
-//        }
         patch.uvSampling(NumSample, triangles);
     }
 }
@@ -168,4 +161,5 @@ void Model::getDataFromTriangles(vector<point4> &vertices, vector<vec4> &normals
 
 void Model::clearData() {
     triangles.clear();
+    patches.clear();
 }
