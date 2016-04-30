@@ -3,7 +3,7 @@
 // just pass them through to the render:
 // 
 // on the mac, you may need to say "varying vec4 color;" instead of this:
-//varying vec4 color;
+varying vec4 color;
 
 // vector parameters that are passed from vshader
 varying vec3 light_vertex;
@@ -31,15 +31,15 @@ void main()
     
   // implement blinn/phong shading in a fragement shader
   vec3 ambient_color = product(material_ambient, light_ambient);
-    
+  
   float kd = max(dot(light_vertex, N), 0.0);
   vec3 diffuse_color = kd * product(material_diffuse, light_diffuse);
-    
+  
   float ks = max(dot(N, H), 0.0);
   vec3 specular_color = pow(ks, material_shininess) * product(material_specular, light_specular);
   
   // "gl_FragColor" is already defined for us - it's the one thing you have
   // to set in the fragment shader:
-  gl_FragColor = vec4(diffuse_color + ambient_color + specular_color, 1.0);;
+  gl_FragColor = vec4((diffuse_color + ambient_color + specular_color), 1.0);
 }
 

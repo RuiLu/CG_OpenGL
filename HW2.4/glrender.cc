@@ -45,7 +45,7 @@ vector<vec4> n;
 
 vector<Patch> models;
 Model model;
-int NumSample = 10;
+int NumSample = 20;
 
 // light & material definitions, again for lighting calculations:
 point4 light_position = point4(100.0, 100.0, 100.0, 1.0);
@@ -276,14 +276,14 @@ void mykey(unsigned char key, int mousex, int mousey)
         
         int oldNumSample = NumSample;
         if (key == '<') {
-            if (NumSample < 20) {
-                NumSample++;
+            if (NumSample < 56) {
+                NumSample += 3;
                 std::cout<<'<'<<std::endl;
             }
         }
         if (key == '>') {
             if (NumSample > 2) {
-                NumSample--;
+                NumSample -= 3;
                 std::cout<<'>'<<std::endl;
             }
         }
