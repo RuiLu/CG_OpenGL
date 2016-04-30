@@ -16,12 +16,6 @@ varying vec3 viewer_vertex;
 varying vec3 H;
 varying vec3 N;
 
-// product of components, which we will use for shading calculations:
-vec3 product(vec4 a, vec4 b)
-{
-    return vec3(a[0]*b[0], a[1]*b[1], a[2]*b[2]);
-}
-
 void main() 
 {
     light_vertex = normalize(vec3(light_position - vPosition));
